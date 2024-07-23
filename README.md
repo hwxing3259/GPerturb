@@ -1,7 +1,7 @@
 # GPerturb: Additive, multivariate, sparse distributional regression model for  perturbation effect estimation
 This repository hosts the implementation of GPerturb [(link)](), a Bayesian model identify and estimate interpretable sparse gene-level perturbation effects. 
 
-<p align="center"><img src="https://github.com/hwxing3259/GPerturb/blob/main/visualisation/perturbation-generative-process-ZIP.drawio.png" alt="GPerturb" width="900px" /></p>
+<p align="center"><img src="https://github.com/hwxing3259/GPerturb/blob/main/visualisation/figure1.png" alt="GPerturb" width="900px" /></p>
 
 ## Core API Interface
 Here we use the Reoplogle dataset from [Bereket & Karaletsos, NeurIPS 2023](https://arxiv.org/abs/2311.02794) as an example
