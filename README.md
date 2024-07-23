@@ -4,7 +4,7 @@ This repository hosts the implementation of GPerturb [(link)](), a Bayesian mode
 <p align="center"><img src="https://github.com/hwxing3259/GPerturb/blob/main/visualisation/figure1.png" alt="GPerturb" width="900px" /></p>
 
 ## Core API Interface
-Here we use the SciPlex2 dataset from [lotfollahi et al 2023](https://github.com/theislab/CPA) as an example
+Here we use the SciPlex2 dataset from [Lotfollahi et al 2023](https://github.com/theislab/CPA) as an example
 ```
 # ############################################# load dataset ##########################################
 adata = sc.read('SciPlex2_new.h5ad')
