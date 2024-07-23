@@ -4,47 +4,56 @@ This repository hosts the implementation of GPerturb [(link)](), a Bayesian mode
 <p align="center"><img src="https://github.com/hwxing3259/GPerturb/blob/main/visualisation/figure1.png" alt="GPerturb" width="900px" /></p>
 
 ## Core API Interface
-Here we use the Reoplogle dataset from [Bereket & Karaletsos, NeurIPS 2023](https://arxiv.org/abs/2311.02794) as an example
+Here we use the SciPlex2 dataset from [lotfollahi et al 2023](https://github.com/theislab/CPA) as an example
 ```
 # ############################################# load dataset ##########################################
-adata = sc.read_h5ad('replogle.h5ad')
-adata.obs['n_feature'] = (adata.X > 0).sum(1)
+adata = sc.read('SciPlex2_new.h5ad')
 
-my_observation = adata.X
-gene_name = list(adata.var.gene_name)
-my_observation = torch.tensor(my_observation * 1.0, dtype=torch.float)
-
-my_cell_info = adata.obs[['core_adjusted_UMI_count', 'mitopercent', 'n_feature', 'core_scale_factor']]
-my_cell_info = torch.tensor(my_cell_info.to_numpy() * 1.0, dtype=torch.float)
-my_cell_info[:, 2] = my_cell_info[:, 2] / my_cell_info[:, 0]
-my_cell_info[:, 0] = np.log(my_cell_info[:, 0])
-
-pathways = adata.uns['pathways']
-
-my_conditioner = pd.get_dummies(adata.obs['gene'])
-my_conditioner = my_conditioner.drop('non-targeting', axis=1)
+torch.manual_seed(3141592)
+# load data:
+my_conditioner = pd.read_csv("SciPlex2_perturbation.csv", index_col=0)
+my_conditioner = my_conditioner.drop('Vehicle', axis=1)  # TODO: or retaining it
 cond_name = list(my_conditioner.columns)
 my_conditioner = torch.tensor(my_conditioner.to_numpy() * 1.0, dtype=torch.float)
+my_conditioner = torch.pow(my_conditioner, 0.2)  # a power transformation of dosages
+
+my_observation = pd.read_csv("SciPlex2.csv", index_col=0)
+print(my_observation.shape)
+my_observation = torch.tensor(my_observation.to_numpy() * 1.0, dtype=torch.float)
+
+gene_name = list(pd.read_csv('SciPlex2_gene_name.csv').to_numpy()[:, 0])
+
+my_cell_info = pd.read_csv("SciPlex2_cell_info.csv", index_col=0)
+my_cell_info.n_genes = my_cell_info.n_genes/my_cell_info.n_counts
+my_cell_info.n_counts = np.log(my_cell_info.n_counts)
+cell_info_names = list(my_cell_info.columns)
+my_cell_info = torch.tensor(my_cell_info.to_numpy() * 1.0, dtype=torch.float)
 
 # ##################### define and train ZIP=GPerturb #################################################
 output_dim = my_observation.shape[1]
 sample_size = my_observation.shape[0]
-hidden_node = 1000
+hidden_node = 700  # or 1000
 hidden_layer = 4
 conditioner_dim = my_conditioner.shape[1]
 cell_info_dim = my_cell_info.shape[1]
-lr_parametric = 5e-4  
+
+lr_parametric = 1e-3  
+nu_1, nu_2, nu_3, nu_4, nu_5, nu_6 = torch.tensor([1., 1e-2, 1., 1e-2, 3., 1e-2]).to(device)
 tau = torch.tensor(1.).to(device)
 
-parametric_model = GPerturb_ZIP(conditioner_dim=conditioner_dim, output_dim=output_dim,
-                                base_dim=cell_info_dim, data_size=sample_size,
-                                hidden_node=hidden_node, hidden_layer_1=hidden_layer,
-                                hidden_layer_2=hidden_layer, tau=tau)
+parametric_model = GPerturb_gaussian(conditioner_dim=conditioner_dim, output_dim=output_dim, base_dim=cell_info_dim,
+                               data_size=sample_size, hidden_node=hidden_node, hidden_layer_1=hidden_layer,
+                               hidden_layer_2=hidden_layer, tau=tau)
+parametric_model.test_id = testing_idx = list(np.random.choice(a=range(my_observation.shape[0]), size=my_observation.shape[0] // 8, replace=False))
 parametric_model = parametric_model.to(device)
 
-# train the model from scratch
-parametric_model.GPerturb_train(epoch=300, observation=my_observation, cell_info=my_cell_info, perturbation=my_conditioner, 
-                                lr=lr_parametric, device=device)
+# ############################# train the model from scratch #################################################################
+parametric_model.GPerturb_train(epoch=250, observation=my_observation, cell_info=my_cell_info, perturbation=my_conditioner, 
+                                nu_1=nu_1, nu_2=nu_2, nu_3=nu_3, nu_4=nu_4, nu_5=nu_5, nu_6=nu_6, lr=lr_parametric, device=device)
+
+# ############################### retrieve fitted values on test set from the model ########################################################
+fitted_vals = Gaussian_estimates(model=parametric_model, obs=my_observation[parametric_model.test_id], 
+                                 cond=my_conditioner[parametric_model.test_id], cell_info=my_cell_info[parametric_model.test_id])
 ```
 
 ## Reproducing numerical examples
