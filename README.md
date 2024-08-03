@@ -60,12 +60,12 @@ fitted_vals = Gaussian_estimates(model=parametric_model, obs=my_observation[para
 ```
 
 ## Reproducing numerical examples
-Codes for reproducing the LUHMES example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/demo/LUHMES_GPerturb.ipynb)
+Codes for reproducing the LUHMES example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/numerical_examples/LUHMES_GPerturb.ipynb)
 
-Codes for reproducing the TCells example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/demo/TCells_GPerturb.ipynb)
+Codes for reproducing the TCells example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/numerical_examples/TCells_GPerturb.ipynb)
 
-Codes for reproducing the SciPlex2 example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/demo/SciPlex2_GPerturb.ipynb)
+Codes for reproducing the SciPlex2 example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/numerical_examples/SciPlex2_GPerturb.ipynb)
 
-Codes for reproducing the Replogle et al 2022 example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/demo/Replogle_GPerturb.ipynb)
+Codes for reproducing the Replogle et al 2022 example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/numerical_examples/Replogle_GPerturb.ipynb)
 
 Pre-trained models and datasets can be downloaded from: [Link](https://drive.google.com/drive/folders/1OqzcBbEL3HHOjoSQTynwRHhx2w8WVIrU?usp=share_link)
