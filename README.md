@@ -3,6 +3,23 @@ This repository hosts the implementation of GPerturb [(link)](), a Bayesian mode
 
 <p align="center"><img src="https://github.com/hwxing3259/GPerturb/blob/main/visualisation/figure1.png" alt="GPerturb" width="900px" /></p>
 
+
+
+## System requirements
+### Sofrware dependency and OS
+The package requires `Python>=3.80`, and following packages
+```
+matplotlib>=3.70
+numpy>=1.26
+pandas>=2.0.0
+torch>=2.0
+```
+
+The package is tested on Windows, Mac OS and Ubuntu 16.04 systems.
+
+### 
+
+
 ## Core API Interface
 Here we use the SciPlex2 dataset from [Lotfollahi et al 2023](https://github.com/theislab/CPA) as an example
 ### Load relavent datasets
