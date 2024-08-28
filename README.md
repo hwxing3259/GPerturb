@@ -7,7 +7,7 @@ This repository hosts the implementation of GPerturb [(link)](), a Bayesian mode
 
 ## System requirements
 ### Sofrware dependency and OS
-The package requires `Python>=3.80`, and following packages
+The package is developed under `Python>=3.80`, and requires the following packages
 ```
 matplotlib>=3.70
 numpy>=1.26
@@ -15,13 +15,16 @@ pandas>=2.0.0
 torch>=2.0
 ```
 
-The package is tested on Windows, Mac OS and Ubuntu 16.04 systems.
+The `GPerturb` package is tested on Windows, Mac OS and Ubuntu 16.04 systems.
 
-### 
+### Installation Guide
+The `GPerturb` can be installed using
+```
+pip install GPerturb 
+```
 
-
-## Core API Interface
-Here we use the SciPlex2 dataset from [Lotfollahi et al 2023](https://github.com/theislab/CPA) as an example
+### Demonstration
+Here we use the SciPlex2 dataset from [Lotfollahi et al 2023](https://github.com/theislab/CPA) as an example to demonstrate the Gaussian GPerturb pipeline
 ### Load relavent datasets
 ```
 adata = sc.read('SciPlex2_new.h5ad')
@@ -75,6 +78,12 @@ parametric_model.GPerturb_train(epoch=250, observation=my_observation, cell_info
 fitted_vals = Gaussian_estimates(model=parametric_model, obs=my_observation[parametric_model.test_id], 
                                  cond=my_conditioner[parametric_model.test_id], cell_info=my_cell_info[parametric_model.test_id])
 ```
+
+### Estimated running time
+The codes above takes roughly 1.5 hours to run on our desktop computer with 16GB RAM, a AMD Ryzen 7 5700X processor and a Nvidia RTX2060 GPU. 
+
+## Instruction for use
+
 
 ## Reproducing numerical examples
 Codes for reproducing the LUHMES example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/numerical_examples/LUHMES_GPerturb.ipynb)
