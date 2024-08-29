@@ -20,7 +20,8 @@ The `GPerturb` package is tested on Windows, Mac OS and Ubuntu 16.04 systems.
 ### Installation Guide
 The `GPerturb` can be installed using
 ```
-pip install GPerturb 
+pip install GPerturb
+from GPerturb import *
 ```
 
 ### Demonstration
@@ -83,7 +84,7 @@ fitted_vals = Gaussian_estimates(model=parametric_model, obs=my_observation[para
 The codes above takes roughly 1.5 hours to run on our desktop computer with 16GB RAM, a AMD Ryzen 7 5700X processor and a Nvidia RTX2060 GPU. 
 
 ## Instruction for use
-
+User needs to provide three data matrices: A $N\times G$ gene expression matrix $\mathbf{X}$ where $N,G$ are the numer of cells and number of genes respectively, a $N \times K$ cell level informaiton matrix $\mathbf{C}$ where $K$ is number of cell-level features, and a $N\times D$ perturbation matrix $\mathbf{P}$ where $D$ is the dimension of the perturbation vectors. Given $\mathbf{X}, \mathbf{C}, \mathbf{P}$, and suppose $\mathbf{P}$ consists of $D'$ unique perturbation vectors. GPerturb will return (1) a $N \times G$ matrix $\hat{\mathbf{X}}$, the estimated gene expression level, (2) a $ D' \times G$ sparse matrix where the non-zero entries are the estimated perturbation effect of a specific perturbation on a specific gene. 
 
 ## Reproducing numerical examples
 Codes for reproducing the LUHMES example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/numerical_examples/LUHMES_GPerturb.ipynb)
