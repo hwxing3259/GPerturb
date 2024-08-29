@@ -86,7 +86,7 @@ The codes above takes roughly 1.5 hours to run on our desktop computer with 16GB
 ## Instruction for use
 User needs to provide three data matrices: A $N\times G$ gene expression matrix $\mathbf{X}$ where $N,G$ are the numer of cells and number of genes respectively, a $N \times K$ cell level informaiton matrix $\mathbf{C}$ where $K$ is number of cell-level features, and a $N\times D$ perturbation matrix $\mathbf{P}$ where $D$ is the dimension of the perturbation vectors. Given $\mathbf{X}, \mathbf{C}, \mathbf{P}$, and suppose $\mathbf{P}$ consists of $D'$ unique perturbation vectors. GPerturb will return (1) a $N \times G$ matrix $\hat{\mathbf{X}}$, the estimated gene expression matrix, and (2) a $D' \times G$ sparse matrix where the non-zero entries are the estimated perturbation effect of a specific perturbation on a specific gene. 
 
-## Reproducing numerical examples
+## Reproducing numerical examples in the paper
 Codes for reproducing the LUHMES example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/numerical_examples/LUHMES_GPerturb.ipynb)
 
 Codes for reproducing the TCells example: [Link](https://github.com/hwxing3259/GPerturb/blob/main/numerical_examples/TCells_GPerturb.ipynb)
