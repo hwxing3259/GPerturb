@@ -680,3 +680,163 @@ class GPerturb_gaussian(nn.Module):
                 print('EPOCH={}, training_error={}'.format(EPOCH, training_loss[EPOCH]))
 
 
+
+
+
+
+class GPerturb_ZINB(nn.Module):
+    def __init__(self, conditioner_dim, output_dim, base_dim, data_size, hidden_node, hidden_layer_1, hidden_layer_2, tau):
+        # base_dim consists 4 columns: Library size, UMI/Library size, MT-gene proportion, batch id
+        # assume that library size acts on marginal effect via directly scaling?
+        # also: uniform zero-inflation parameter seems not sensible: it does vary across genes and samples
+        super(GPerturb_ZINB, self).__init__()
+        self.output_dim = output_dim
+        self.hidden_node = hidden_node
+        self.base_dim = base_dim
+        self.data_size = data_size
+        self.hidden_layer_1 = hidden_layer_1
+        self.hidden_layer_2 = hidden_layer_2
+        self.conditioner_dim = conditioner_dim
+        net = [nn.Linear(self.conditioner_dim, self.hidden_node)]
+        for _ in range(self.hidden_layer_1):
+            net += [nn.ReLU(), nn.Linear(self.hidden_node, self.hidden_node)]
+        net += [nn.Linear(self.hidden_node, 4*self.output_dim)]
+        self.net = nn.Sequential(*net)
+
+        if base_dim == 0:
+            self.net_base = None
+        else:
+            net_base = [nn.Linear(self.base_dim, self.hidden_node)]
+            for _ in range(self.hidden_layer_2):
+                net_base += [nn.ReLU(), nn.Linear(self.hidden_node, self.hidden_node)]
+            net_base += [nn.Linear(self.hidden_node, self.output_dim)]
+            self.net_base = nn.Sequential(*net_base)
+        self.net_base_const = nn.Parameter(torch.zeros(self.output_dim))
+
+        self.log_dispersion = nn.Parameter(torch.zeros(self.output_dim))  # each feature has its own dispersion
+        self.logit_pi = nn.Parameter(torch.zeros(self.output_dim))  # each feature has its own missing rate
+        self.tau = tau
+        self.test_id = None
+
+    def forward(self, conditioner, cell_info):
+        # self.net(conditioner) has size batch*(3*output), turn it into batch*2*output
+        cond_norm = torch.linalg.norm(conditioner, ord=2, dim=1, keepdim=True)
+        cond_output = self.net(conditioner).reshape(conditioner.shape[0], 4, self.output_dim)
+        mu_mean, mu_log_var, logit_p, logit_p_log_var = \
+            cond_norm*cond_output[:, 0, :], cond_norm*cond_output[:, 1, :], cond_output[:, 2, :], cond_output[:, 3, :]
+        if cell_info is not None:
+            base_mean = self.net_base(cell_info) + self.net_base_const  # baseline rate of a cell
+        else:
+            base_mean = self.net_base_const
+
+        return mu_mean, mu_log_var, base_mean, logit_p, logit_p_log_var
+
+    def zinb_loss(self, observation, conditioner, cell_info, nu_1, nu_2, nu_3, nu_4,
+                 KL_factor=1., test=False, extra_reg=0.01):
+        device = observation.device
+        z_gp_mean = torch.tensor(-1.5).to(device)
+        if cell_info is not None:
+            base_rate_func_val = self.net_base(cell_info)
+            base_rate = base_rate_func_val + self.net_base_const
+        else:
+            base_rate_func_val = torch.tensor(0.).to(observation.device)
+            base_rate = self.net_base_const
+        # base_rate = self.net_base(cell_info)  # baseline rate of a cell
+
+        # base_L = cell_info[:, 0:1]  # the library size of it
+        cond_norm = torch.linalg.norm(conditioner, ord=2, dim=1, keepdim=True)  # size of the conditioner
+        cond_output = self.net(conditioner).reshape(conditioner.shape[0], 4, self.output_dim)  # perturb rate
+        mu_mean, mu_log_var, logit_p_mean, logit_p_log_var = \
+            cond_norm*cond_output[:, 0, :], cond_norm*cond_output[:, 1, :], cond_output[:, 2, :], cond_output[:, 3, :]
+        logit_p = logit_p_mean + torch.exp(0.5 * logit_p_log_var) * torch.randn_like(logit_p_mean)
+
+        soft_binary = F.gumbel_softmax(torch.stack((logit_p, torch.zeros_like(logit_p)), dim=-1), hard=False,
+                                       tau=self.tau)[:, :, 0]  # batch_size * output_dim
+
+        aux = mu_mean + torch.exp(0.5*mu_log_var) * torch.randn_like(mu_log_var)
+        raw_cond_rate = base_rate + soft_binary * aux
+        # batch_size * output_dim
+        cond_rate = logexpp1(raw_cond_rate) #  * base_L  # / (self.output_dim * F.sigmoid(self.logit_pi))  # scaled by library size
+        log_cond_rate = loglogexpp1(raw_cond_rate) #  + torch.log(base_L)  # - nn.LogSigmoid(self.logit_pi)
+
+        dispersion = torch.exp(self.log_dispersion)
+        gamma_pois_lkd = observation * (self.log_dispersion + log_cond_rate) - \
+                         (observation + 1 / dispersion) * torch.log(1 + cond_rate * dispersion) - \
+                         torch.lgamma(observation + 1.) - torch.lgamma(1 / dispersion) + \
+                         torch.lgamma(observation + 1 / dispersion)
+
+        # pois_log_lkd = observation*log_cond_rate - cond_rate - torch.lgamma(observation+1.)# batch_size * output_dim Pois lkd
+
+        batch_lkd = gamma_pois_lkd + nn.LogSigmoid()(self.logit_pi.unsqueeze(0))  # non zero part of mixture
+        zero_part_lkd = nn.LogSigmoid()(-1.*self.logit_pi.unsqueeze(0))*torch.ones_like(batch_lkd)  # zero part
+        stacked_lkd = torch.logsumexp(torch.stack((batch_lkd, zero_part_lkd), dim=2), dim=2)
+        batch_lkd[observation == 0.] = stacked_lkd[observation == 0.]  # only update the 0 entries
+
+        unique, idx, counts = torch.unique(conditioner, dim=0, sorted=True, return_inverse=True, return_counts=True)
+        _, ind_sorted = torch.sort(idx, stable=True)
+        cum_sum = counts.cumsum(0)
+        cum_sum = torch.cat((torch.tensor([0]).to(device), cum_sum[:-1]))
+        unique_id = ind_sorted[cum_sum]
+        unique_cond = conditioner[unique_id]
+
+        unique_cond_norm = torch.sum(unique_cond ** 2, dim=1)
+        gram = (unique_cond_norm[:, None] + unique_cond_norm[None, :] - 2 * torch.matmul(unique_cond, unique_cond.T))
+        sig_1_inv, sig_2_inv = torch.linalg.inv(nu_1 * torch.exp(-gram / nu_2)), \
+            torch.linalg.inv(nu_3 * torch.exp(-gram / nu_4))
+
+        kl_1 = 0.5 * (((sig_1_inv @ mu_mean[unique_id]) * mu_mean[unique_id]).sum() +
+                      (torch.exp(mu_log_var[unique_id]) * torch.diag(sig_1_inv).unsqueeze(-1)).sum() -
+                      (mu_log_var[unique_id]).sum()) / (cond_rate.shape[1])
+
+        kl_2 = 0.5 * (((sig_2_inv @ (logit_p_mean[unique_id] - z_gp_mean)) * (logit_p_mean[unique_id] - z_gp_mean)).sum() +
+                      (torch.exp(logit_p_log_var[unique_id]) * torch.diag(sig_2_inv).unsqueeze(-1)).sum() -
+                      (logit_p_log_var[unique_id]).sum()) / (cond_rate.shape[1])  # average over proteins,
+        # Kl of parameters associated with each column (protein) of the dataset
+
+        return -1 * (batch_lkd.mean() * self.data_size) + KL_factor*(kl_1 + kl_2 + extra_reg*(base_rate_func_val**2).mean())
+
+    def GPerturb_train(self, epoch, observation, cell_info, perturbation,
+                    nu_1=1.0, nu_2=0.1, nu_3=1.0, nu_4=0.1, lr=1e-3, device='cpu'):
+        my_dataset = MyDataSet(observation=observation, conditioner=perturbation, cell_info=cell_info)
+
+        testing_idx = set(
+            np.random.choice(a=range(observation.shape[0]), size=observation.shape[0] // 8, replace=False))
+        training_idx = list(set(range(observation.shape[0])) - testing_idx)
+        testing_idx = list(testing_idx)
+        training_idx_sampler = torch.utils.data.SubsetRandomSampler(training_idx)
+        training_loader = torch.utils.data.DataLoader(my_dataset, batch_size=100, sampler=training_idx_sampler)
+        test_observation = observation[testing_idx].to(device)
+        test_conditioner = perturbation[testing_idx].to(device)
+        test_cell_info = cell_info[testing_idx].to(device)
+        self.test_id = testing_idx
+
+        optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        training_loss = torch.zeros(epoch)
+        testing_loss = torch.zeros(epoch)
+        for EPOCH in range(epoch):
+            curr_training_loss = 0.
+            self.train()
+            for i, (obs, cond, cell_info) in enumerate(training_loader):
+                obs = obs.to(device)
+                cond = cond.to(device)
+                cell_info = cell_info.to(device)
+                loss = self.zinb_loss(observation=obs, conditioner=cond, cell_info=cell_info,
+                                                    nu_1=nu_1, nu_2=nu_2, nu_3=nu_3, nu_4=nu_4)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                curr_training_loss += loss.detach().cpu().item() * obs.shape[0]
+            training_loss[EPOCH] = curr_training_loss / len(training_idx)
+            self.eval()
+            with torch.no_grad():
+                testing_loss[EPOCH] = self.zip_loss(observation=test_observation,
+                                                                   conditioner=test_conditioner,
+                                                                   cell_info=test_cell_info, nu_1=nu_1, nu_2=nu_2,
+                                                                   nu_3=nu_3, nu_4=nu_4,
+                                                                   test=True).detach().cpu().item()
+            if EPOCH % 10 == 0:
+                print('EPOCH={}, test_error={}'.format(EPOCH, testing_loss[EPOCH]))
+                print('EPOCH={}, training_error={}'.format(EPOCH, training_loss[EPOCH]))
+
+        return training_loss, testing_loss
