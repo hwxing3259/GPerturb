@@ -10,9 +10,9 @@ This repository hosts the implementation of GPerturb [(link)](), a Bayesian mode
 The package is developed under `Python>=3.80`, and requires the following packages
 ```
 matplotlib>=3.70
-numpy>=1.26
+numpy==1.26.4
 pandas>=2.0.0
-torch>=2.0
+torch==2.2.2
 ```
 
 The `GPerturb` package is tested on Windows, Mac OS and Ubuntu 16.04 systems.
