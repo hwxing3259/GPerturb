@@ -1,5 +1,5 @@
 # GPerturb: Additive, multivariate, sparse distributional regression model for  perturbation effect estimation
-This repository hosts the implementation of GPerturb [(link)](), a Bayesian model identify and estimate interpretable sparse gene-level perturbation effects. 
+This repository hosts the implementation of GPerturb [(link)](https://www.biorxiv.org/content/10.1101/2025.03.26.645455v1), a Bayesian model identify and estimate interpretable sparse gene-level perturbation effects. 
 
 <p align="center"><img src="https://github.com/hwxing3259/GPerturb/blob/main/visualisation/figure1.png" alt="GPerturb" width="900px" /></p>
 
