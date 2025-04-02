@@ -63,7 +63,7 @@ cell_info_dim = my_cell_info.shape[1]
 lr_parametric = 1e-3  
 tau = torch.tensor(1.).to(device)
 
-parametric_model = GPerturb_gaussian(conditioner_dim=conditioner_dim, output_dim=output_dim, base_dim=cell_info_dim,
+parametric_model = GPerturb_Gaussian(conditioner_dim=conditioner_dim, output_dim=output_dim, base_dim=cell_info_dim,
                                data_size=sample_size, hidden_node=hidden_node, hidden_layer_1=hidden_layer,
                                hidden_layer_2=hidden_layer, tau=tau)
 parametric_model.test_id = testing_idx = list(np.random.choice(a=range(my_observation.shape[0]), size=my_observation.shape[0] // 8, replace=False))
