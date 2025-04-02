@@ -20,8 +20,13 @@ The `GPerturb` package is tested on Windows, Mac OS and Ubuntu 16.04 systems.
 ### Installation Guide
 The `GPerturb` can be installed using
 ```
-pip install GPerturb
+pip install git+https://github.com/hwxing3259/GPerturb.git
 from GPerturb import *
+```
+
+Alternatively, one could directly download the [python file](https://github.com/hwxing3259/GPerturb/blob/main/GPerturb/GPerturb_model.py) to the current working directory and call
+```
+from GPerturb_model import *
 ```
 
 ### Demonstration
