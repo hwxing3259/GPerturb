@@ -28,6 +28,7 @@ Alternatively, one could directly download the [python file](https://github.com/
 ```
 from GPerturb_model import *
 ```
+to avoid conflicting dependencies.
 
 ### Demonstration
 Here we use the SciPlex2 dataset from [Lotfollahi et al 2023](https://github.com/theislab/CPA) as an example to demonstrate the Gaussian GPerturb pipeline
